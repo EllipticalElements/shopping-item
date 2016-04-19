@@ -1,0 +1,105 @@
+<link rel="import" href="../polymer/polymer.html">
+
+<dom-module id="item-navigation">
+    <style>
+        :host{
+            display:none;
+            color:#212121;
+        }
+        :host.flex{
+            display:-webkit-flex;
+            display:flex;
+            -webkit-align-items:center;
+            align-items:center;
+            margin-bottom:1em;
+        }
+        :host .hide{
+            display:none;
+        }
+        :host>.divider{
+            font-size:20px;
+            margin:0 1em;
+        }
+        :host>a{
+            line-height:16px;
+            color:#212121;
+            position:relative;
+        }
+    </style>
+    <template>
+        <a class="hide" id="backArrow">
+            <paper-ripple></paper-ripple>
+            <span id="backIcon"></span>
+        </a>
+        <span id="divider" class="divider">|</span>
+        <a class="hide" id="forwardArrow">
+            <paper-ripple></paper-ripple>
+            <span id="forwardIcon"></span>
+        </a>
+    </template>
+</dom-module>
+<script>
+
+    Polymer({
+
+        is: 'item-navigation',
+
+        properties: {
+            prevUrl:{
+                type:String,
+                value:null
+            },
+            nextUrl:{
+                type:String,
+                value:null
+            },
+            prevCssIcon:{
+                type:String,
+                value:'icon-arrow-back'
+            },
+            nextCssIcon:{
+                type:String,
+                value:'icon-arrow-forward'
+            },
+            color:{
+                type:String,
+                value:null
+            }
+        },
+
+        listeners:{},
+
+        ready:function(){
+            this._setIcons();
+            this._setColor();
+            this._initNavigation();
+        },
+
+        _setIcons:function(){
+            this.$.backIcon.classList.add(this.prevCssIcon);
+            this.$.forwardIcon.classList.add(this.nextCssIcon);
+        },
+
+        _setColor:function(){
+            if(this.color){
+                this.style.color=this.color;
+                this.$.backArrow.style.color=this.color;
+                this.$.forwardArrow.style.color=this.color;
+            }
+        },
+
+        _initNavigation:function(){
+            if(this.prevUrl) {
+                this.$.backArrow.setAttribute('href',this.prevUrl);
+                this.$.backArrow.classList.remove('hide');
+            }
+            if(this.nextUrl) {
+                this.$.forwardArrow.setAttribute('href',this.nextUrl);
+                this.$.forwardArrow.classList.remove('hide');
+            }
+            if(this.prevUrl && this.nextUrl) this.$.divider.classList.remove('hide');
+            if(this.prevUrl || this.nextUrl) this.classList.add('flex');
+        }
+    });
+
+</script>

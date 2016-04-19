@@ -1,0 +1,183 @@
+<link rel="import" href="../polymer/polymer.html">
+<link rel="import" href="../elliptical-polymer-behaviors/component-behavior.html">
+
+<script>
+    Polymer({
+        is: 'shopping-item',
+        behaviors:[Elliptical.ComponentBehavior],
+        properties:{
+            _image:{
+                value:null
+            },
+            images:{
+                type:String,
+                value:null
+            },
+            debugService:{
+                type:String,
+                value:null
+            },
+            notifyService:{
+                type:String,
+                value:null
+            },
+            maxPollingIntervals:{
+                type:Number,
+                value:20
+            },
+            pollingInterval:{
+                type:Number,
+                value:300
+            },
+            _debugService:{
+                type:Object,
+                value:null
+            },
+            _notifyService:{
+                type:Object,
+                value:null
+            },
+            _images:{
+                type:Array,
+                value:null
+            },
+            _loadedImages:{
+                type:Array,
+                value:null
+            }
+        },
+
+        ready:function(){
+            this._image=this.element.find('[data-image]');
+            var click=this._data.click;
+            this._setDebugService();
+            this._setNotifyService();
+            this._setImages();
+            this._event(this.element, click, 'alt-image', this._onSelectAltImage.bind(this));
+        },
+
+        detached:function(){
+
+        },
+        
+        _setImages:function(){
+            if(this.images && this.images !==''){
+                this._images=JSON.parse(this.images);
+                this._preloadItemImages();
+            }
+        },
+
+        _onSelectAltImage:function(event){
+            var target=$(event.currentTarget);
+            var src=target.attr('data-src');
+            this._image.attr('src',src);
+            if(this.debugService) this._debug();
+        },
+        
+        _setDebugService:function(){
+            if(this.debugService){
+                this._debugService=this.$service(this.debugService);
+            }
+        },
+        
+        _setNotifyService:function(){
+            if(this.notifyService){
+                this._notifyService=this.$service(this.notifyService);
+            }
+        },
+
+        _debug:function(){
+            var service=this._debugService;
+            if(service && service.show){
+                service.show();
+            }
+        },
+        
+        _preloadItemImages:function(){
+            var images=this._images;
+            this._loadedImages=[];
+            var loadedImages=this._loadedImages;
+            images.forEach(function (src) {
+                var image = new Image();
+                image.src = src;
+                $(image).bind('load', function (event) {
+                    loadedImages.push(image);
+                });
+            });
+        },
+        
+        _getLoadedImage:function(src){
+            var loadedImages=this._loadedImages;
+            if(loadedImages){
+                var loadedImage=null;
+                for(var i=0;i<loadedImages.length;i++){
+                    var image=loadedImages[i];
+                    if(image.src.toLowerCase()===src.toLowerCase()){
+                        image.setAttribute('zoom-image','');
+                        image.setAttribute('data-image','');
+                        loadedImage=image;
+                        break;
+                    }
+                }
+                return loadedImage;
+            } else return null;
+        },
+        
+        _setLoadedImage:function(image){
+            this._image.replaceWith(image);
+            this._image=$(image);
+        },
+        
+        _showNotification:function(){
+            var notify=this._notifyService;
+            if(notify){
+                notify.show('loading image',{duration:30000});
+            }
+        },
+        
+        _hideNotification:function(){
+            var notify=this._notifyService;
+            if(notify){
+                notify.hide();
+            }
+        },
+        
+        _pollLoadedImage:function(src){
+             var self=this;
+             var delay=this.pollingInterval;
+             var MAX=this.maxPollingIntervals;
+             var count=0;
+             var intervalId=setInterval(function(){
+                 var image=self._getLoadedImage(src);
+                 if(image){
+                     self._setLoadedImage(image);
+                     self._hideNotification();
+                     clearInterval(intervalId);
+                 }else{
+                     count++;
+                     if(count > MAX) {
+                         self._hideNotification();
+                         clearInterval(intervalId);
+                     }
+                 }
+             },delay);
+        },
+        
+        setImage:function(src){
+            this._image.attr('src',src);
+            if(this.debugService) this._debug();
+        },
+        
+        setPreloadedImage:function(src){
+            if(!this._images) return;
+            var image=this._getLoadedImage(src);
+            if(!image) {
+                this._showNotification();
+                this._pollLoadedImage(src);
+            }
+            else this._setLoadedImage(image);
+        }
+        
+    });
+
+</script>
