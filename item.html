@@ -56,10 +56,6 @@
             this._event(this.element, click, 'alt-image', this._onSelectAltImage.bind(this));
         },
 
-        detached:function(){
-
-        },
-        
         _setImages:function(){
             if(this.images && this.images !==''){
                 this._images=JSON.parse(this.images);
