@@ -2,178 +2,235 @@
 <link rel="import" href="../elliptical-polymer-behaviors/component-behavior.html">
 
 <script>
-    Polymer({
-        is: 'shopping-item',
-        behaviors:[Elliptical.ComponentBehavior],
-        properties:{
-            _image:{
-                value:null
-            },
-            images:{
-                type:String,
-                value:null
-            },
-            debugService:{
-                type:String,
-                value:null
-            },
-            notifyService:{
-                type:String,
-                value:null
-            },
-            maxPollingIntervals:{
-                type:Number,
-                value:20
-            },
-            pollingInterval:{
-                type:Number,
-                value:300
-            },
-            _debugService:{
-                type:Object,
-                value:null
-            },
-            _notifyService:{
-                type:Object,
-                value:null
-            },
-            _images:{
-                type:Array,
-                value:null
-            },
-            _loadedImages:{
-                type:Array,
-                value:null
-            }
-        },
+  Polymer({
+    is: 'shopping-item',
+    behaviors: [Elliptical.ComponentBehavior],
+    properties: {
+      _image: {
+        value: null
+      },
+      images: {
+        type: String,
+        value: null
+      },
+      notifyService: {
+        type: String,
+        value: null
+      },
+      maxPollingIntervals: {
+        type: Number,
+        value: 20
+      },
+      pollingInterval: {
+        type: Number,
+        value: 300
+      },
+      carouselId: {
+        type: String,
+        value: null
+      },
+      _notifyService: {
+        type: Object,
+        value: null
+      },
+      _images: {
+        type: Array,
+        value: null
+      },
+      _loadedImages: {
+        type: Array,
+        value: null
+      },
+      _altImages:{
+        type:Array,
+        value:null
+      }
+    },
 
-        ready:function(){
-            this._image=this.element.find('[data-image]');
-            var click=this._data.click;
-            this._setDebugService();
-            this._setNotifyService();
-            this._setImages();
-            this._event(this.element, click, 'alt-image', this._onSelectAltImage.bind(this));
-        },
+    ready: function () {
+      this._setNotifyService();
+      this._setImages();
+      this._setCarousel();
+      this._events();
+    },
 
-        _setImages:function(){
-            if(this.images && this.images !==''){
-                this._images=JSON.parse(this.images);
-                this._preloadItemImages();
-            }
-        },
+    _events: function () {
+      var click = this._data.click;
+      this._event(this.element, click, 'alt-image', this._onSelectAltImage.bind(this));
+      this._event(this.element, 'ui-carousel-slide', this._onAltImageChange.bind(this));
+      this._event(this.element, 'image-zoom-in', this._onZoomIn.bind(this));
+      this._event(this.element, 'image-zoom-out', this._onZoomOut.bind(this));
+    },
 
-        _onSelectAltImage:function(event){
-            var target=$(event.currentTarget);
-            var src=target.attr('data-src');
-            this._image.attr('src',src);
-            if(this.debugService) this._debug();
-        },
-        
-        _setDebugService:function(){
-            if(this.debugService){
-                this._debugService=this.$service(this.debugService);
-            }
-        },
-        
-        _setNotifyService:function(){
-            if(this.notifyService){
-                this._notifyService=this.$service(this.notifyService);
-            }
-        },
+    _onSelectAltImage: function (event) {
+      var target = $(event.currentTarget);
+      var src = target.attr('data-src');
+      var zoomSrc = target.attr('data-zoom-src');
+      var image = this._getImage();
+      image.attr('src', src);
+      image.attr('zoom-src', zoomSrc);
+      this._fireEvent('selected', {
+        src: src,
+        zoomSrc: zoomSrc
+      });
+      this._clearActive();
+      target.addClass('active');
+      if (this.carouselId && this._isTouchDevice()) this._slideCarousel(target[0]);
+      if (this.debugService) this._debug();
+    },
 
-        _debug:function(){
-            var service=this._debugService;
-            if(service && service.show){
-                service.show();
-            }
-        },
-        
-        _preloadItemImages:function(){
-            var images=this._images;
-            this._loadedImages=[];
-            var loadedImages=this._loadedImages;
-            images.forEach(function (src) {
-                var image = new Image();
-                image.src = src;
-                $(image).bind('load', function (event) {
-                    loadedImages.push(image);
-                });
-            });
-        },
-        
-        _getLoadedImage:function(src){
-            var loadedImages=this._loadedImages;
-            if(loadedImages){
-                var loadedImage=null;
-                for(var i=0;i<loadedImages.length;i++){
-                    var image=loadedImages[i];
-                    if(image.src.toLowerCase()===src.toLowerCase()){
-                        image.setAttribute('zoom-image','');
-                        image.setAttribute('data-image','');
-                        loadedImage=image;
-                        break;
-                    }
-                }
-                return loadedImage;
-            } else return null;
-        },
-        
-        _setLoadedImage:function(image){
-            this._image.replaceWith(image);
-            this._image=$(image);
-        },
-        
-        _showNotification:function(){
-            var notify=this._notifyService;
-            if(notify){
-                notify.show('loading image',{duration:30000});
-            }
-        },
-        
-        _hideNotification:function(){
-            var notify=this._notifyService;
-            if(notify){
-                notify.hide();
-            }
-        },
-        
-        _pollLoadedImage:function(src){
-             var self=this;
-             var delay=this.pollingInterval;
-             var MAX=this.maxPollingIntervals;
-             var count=0;
-             var intervalId=setInterval(function(){
-                 var image=self._getLoadedImage(src);
-                 if(image){
-                     self._setLoadedImage(image);
-                     self._hideNotification();
-                     clearInterval(intervalId);
-                 }else{
-                     count++;
-                     if(count > MAX) {
-                         self._hideNotification();
-                         clearInterval(intervalId);
-                     }
-                 }
-             },delay);
-        },
-        
-        setImage:function(src){
-            this._image.attr('src',src);
-            if(this.debugService) this._debug();
-        },
-        
-        setPreloadedImage:function(src){
-            if(!this._images) return;
-            var image=this._getLoadedImage(src);
-            if(!image) {
-                this._showNotification();
-                this._pollLoadedImage(src);
-            }
-            else this._setLoadedImage(image);
+    _onAltImageChange: function (event) {
+      var detail = event.detail;
+      var index = detail.slideIndex;
+      var image = this.element.find('alt-image')[index];
+      this._clearActive();
+      image.classList.add('active');
+    },
+
+    _onZoomIn:function(){
+      if(this._carousel.suspend) this._carousel.suspend();
+    },
+
+    _onZoomOut:function(){
+      if(this._carousel.resume) this._carousel.resume();
+    },
+
+    _getImage: function () {
+      if (!this._image) this._image = this.element.find('.main-image').find('[data-image]');
+      return this._image;
+    },
+
+    _clearActive: function () {
+      this.element.find('alt-image').removeClass('active');
+    },
+
+    _setImages: function () {
+      if (this.images && this.images !== '') {
+        this._images = JSON.parse(this.images);
+        this._preloadItemImages();
+      }
+    },
+
+    _getAltImagesLength:function(){
+      if(!this._altImages) this._altImages=this.element.find('alt-image');
+      return this._altImages.length;
+    },
+
+    _setNotifyService: function () {
+      if (this.notifyService) {
+        this._notifyService = this.$service(this.notifyService);
+      }
+    },
+
+    _preloadItemImages: function () {
+      var images = this._images;
+      this._loadedImages = [];
+      var loadedImages = this._loadedImages;
+      images.forEach(function (src) {
+        var image = new Image();
+        image.src = src;
+        $(image).bind('load', function (event) {
+          loadedImages.push(image);
+        });
+      });
+    },
+
+    _getLoadedImage: function (src) {
+      var loadedImages = this._loadedImages;
+      if (loadedImages) {
+        var loadedImage = null;
+        for (var i = 0; i < loadedImages.length; i++) {
+          var image = loadedImages[i];
+          if (image.src.toLowerCase() === src.toLowerCase()) {
+            image.setAttribute('zoom-image', '');
+            image.setAttribute('data-image', '');
+            loadedImage = image;
+            break;
+          }
         }
-        
-    });
+        return loadedImage;
+      } else return null;
+    },
+
+    _setLoadedImage: function (img) {
+      var image = this._getImage();
+      image.replaceWith(img);
+      this._image = $(img);
+    },
+
+    _showNotification: function () {
+      var notify = this._notifyService;
+      if (notify) {
+        notify.show('loading image', {
+          duration: 30000
+        });
+      }
+    },
+
+    _hideNotification: function () {
+      var notify = this._notifyService;
+      if (notify) {
+        notify.hide();
+      }
+    },
+
+    _pollLoadedImage: function (src) {
+      var self = this;
+      var delay = this.pollingInterval;
+      var MAX = this.maxPollingIntervals;
+      var count = 0;
+      var intervalId = setInterval(function () {
+        var image = self._getLoadedImage(src);
+        if (image) {
+          self._setLoadedImage(image);
+          self._hideNotification();
+          clearInterval(intervalId);
+        } else {
+          count++;
+          if (count > MAX) {
+            self._hideNotification();
+            clearInterval(intervalId);
+          }
+        }
+      }, delay);
+    },
+
+    _setCarousel: function () {
+      if (this.carouselId) {
+        this._carousel = document.querySelector('#' + this.carouselId);
+      }
+    },
+
+    _slideCarousel: function (element) {
+      var length=this._getAltImagesLength();
+      var images=this._altImages;
+      var index=images.index(element);
+      var carousel=this._carousel;
+      if(index===0) carousel.slideFirst();
+      else if(index===length-1) carousel.slideLast();
+      else carousel.slide(index);
+    },
+
+    _fireEvent: function (evt, data) {
+      this.fire('item-image-' + evt, data);
+    },
+
+    setImage: function (src) {
+      var image = this._getImage();
+      image.attr('src', src);
+      if (this.debugService) this._debug();
+    },
+
+    setPreloadedImage: function (src) {
+      if (!this._images) return;
+      var image = this._getLoadedImage(src);
+      if (!image) {
+        this._showNotification();
+        this._pollLoadedImage(src);
+      }
+      else this._setLoadedImage(image);
+    }
+
+  });
 
 </script>
