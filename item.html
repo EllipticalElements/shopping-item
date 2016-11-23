@@ -44,6 +44,18 @@
       _altImages:{
         type:Array,
         value:null
+      },
+      _video:{
+        value:null
+      },
+      _videoSource:{
+        value:null
+      },
+      _videoContainer:{
+        value:null
+      },
+      _zoom:{
+        value:null
       }
     },
 
@@ -64,9 +76,22 @@
 
     _onSelectAltImage: function (event) {
       var target = $(event.currentTarget);
+      var video=target.attr('data-video');
+      if(video==='true'){
+        this._onSelectAltImageVideo(target);
+        return;
+      }
       var src = target.attr('data-src');
       var zoomSrc = target.attr('data-zoom-src');
       var image = this._getImage();
+      var video=this._getVideo();
+      if(video[0]){
+        video.addClass('hide');
+        var videoContainer=this._getVideoContainer();
+        videoContainer.addClass('hide');
+      }
+      var zoom=this._getZoom();
+      if(zoom[0]) zoom.removeClass('hide');
       image.attr('src', src);
       image.attr('zoom-src', zoomSrc);
       this._fireEvent('selected', {
@@ -77,6 +102,28 @@
       target.addClass('active');
       if (this.carouselId && this._isTouchDevice()) this._slideCarousel(target[0]);
       if (this.debugService) this._debug();
+    },
+
+    _onSelectAltImageVideo: function (target) {
+      var src = target.attr('data-src');
+      var zoomSrc = target.attr('data-zoom-src');
+      this._clearActive();
+      target.addClass('active');
+      if (this.carouselId && this._isTouchDevice()) this._slideCarousel(target[0]);
+      else{
+        var video = this._getVideo();
+        var zoom=this._getZoom();
+        if(zoom[0]) zoom.addClass('hide');
+        video.removeClass('hide');
+        var videoContainer=this._getVideoContainer();
+        videoContainer.removeClass('hide');
+        var player=video[0];
+        var videoSource=this._videoSource;
+        if(videoSource && videoSource[0]){
+           videoSource[0].src = src;
+           player.load();
+        }
+      }
     },
 
     _onAltImageChange: function (event) {
@@ -98,6 +145,24 @@
     _getImage: function () {
       if (!this._image) this._image = this.element.find('.main-image').find('[data-image]');
       return this._image;
+    },
+
+    _getZoom: function () {
+      if (!this._zoom) this._zoom = this.element.find('.main-image');
+      return this._zoom;
+    },
+
+    _getVideoContainer: function () {
+      if (!this._videoContainer) this._videoContainer = this.element.find('.main-video-container');
+      return this._videoContainer;
+    },
+
+    _getVideo: function () {
+      if (!this._video) {
+        this._video = this.element.find('[data-id="main-video"]');
+        this._videoSource = this.element.find('[data-id="main-video-source"]');
+      }
+      return this._video;
     },
 
     _clearActive: function () {
